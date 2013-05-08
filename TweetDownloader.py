@@ -1,14 +1,32 @@
 #!/usr/bin/env python
-import twitter, sys
+import twitter, sys, re
 
 # Simple Tweet Dictionary:
 # 
 
+def phraseify(text, search_string):
+	pattern = search_string + r"[^\.\?!\n:,#]*[\.\?!]*"
+
+	match = re.search(pattern, text, flags=re.IGNORECASE)
+	if not match:
+		# print pattern
+		# print text
+		print "PATTERN: " + pattern + " NO MATCH"
+		raise LookupError
+	text = match.group()
+	if text[-4:] == "http":
+		text = text[:-4] # remove links
+	return text
+
 
 
 class TweetDownloader:
-	def __init__(me):
+	def __init__(me, search_string):
 		me.api = twitter.Api()
+		me.search_string = search_string
+		max_id = None
+		re_pattern = search_string + r"[^\.\?!\n:,#]*[\.\?!]*"
+		me.re = re.compile(re_pattern)
 
 	def simplify_tweet(me, tweet):
 		# Uses regular expressions to simplify the tweet to contain
@@ -18,13 +36,19 @@ class TweetDownloader:
 		# "why are you so awesome?!"
 		# Depends on tweet having a .text and .search_string attribute
 		# creates a .simpletext attribute
-		tweet.simpletext = me.phraseify(tweet.text, tweet.search_string)
+		tweet.text = tweet.text.encode('utf-8', 'ignore')
+		tweet.simpletext = phraseify(tweet.text, tweet.search_string)
+		return tweet
 
-	def test_search(me, search_string):
-		results = me.api.GetSearch(search_string)
+	def test_search(me):
+		results = me.api.GetSearch('"' + me.search_string + '"')
 		for r in results:
+			print "~~~~~~~~~~~~~~~~~~~~~~"
+			r.search_string = search_string
+			me.simplify_tweet(r)
 			print r.text
-			print "----------------"
+			print "="
+			print r.simpletext
 
 
 def main():
@@ -34,15 +58,15 @@ def main():
 	print "=========================="
 	print "=========================="
 	if len(args) == 1:
-		t.test_search("\"why am i\"")
+		t.test_search("why am i")
 		print 
 		print
 		print
 
-		t.test_search("\"because you\"")
+		t.test_search("because you")
 	else:
 		argstr = " ".join(args[1:])
-		t.test_search("\"" + argstr + "\"")
+		t.test_search(argstr)
 
 if __name__ == '__main__':
 	main()
