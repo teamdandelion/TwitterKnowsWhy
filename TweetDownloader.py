@@ -1,34 +1,16 @@
 #!/usr/bin/env python
-import twitter, sys, re
-
-# Simple Tweet Dictionary:
-# 
-
-def phraseify(text, search_string):
-	pattern = search_string + r"[^\.\?!\n:,#]*[\.\?!]*"
-
-	match = re.search(pattern, text, flags=re.IGNORECASE)
-	if not match:
-		# print pattern
-		# print text
-		print "PATTERN: " + pattern + " NO MATCH"
-		raise LookupError
-	text = match.group()
-	if text[-4:] == "http":
-		text = text[:-4] # remove links
-	return text
-
-
+import twitter, sys, re, time
 
 class TweetDownloader:
 	def __init__(me, search_string):
 		me.api = twitter.Api()
 		me.search_string = search_string
-		max_id = None
-		re_pattern = search_string + r"[^\.\?!\n:,#]*[\.\?!]*"
-		me.re = re.compile(re_pattern)
+		me.quoted_string = "\"" + search_string + "\""
+		me.max_id = None
+		me.pattern = search_string + r"[^\.\?!\n:,#]*[\.\?!]*"
+		me.re = re.compile(me.pattern, flags=re.IGNORECASE)
 
-	def simplify_tweet(me, tweet):
+	def process_tweet(me, tweet):
 		# Uses regular expressions to simplify the tweet to contain
 		# a sentance or phrase starting with the search expression
 		# eg: "Argh Dan, why are you so awesome?!" with search 
@@ -36,37 +18,44 @@ class TweetDownloader:
 		# "why are you so awesome?!"
 		# Depends on tweet having a .text and .search_string attribute
 		# creates a .simpletext attribute
+		# Returns True if processing is successful
+		# Returns False if unable to process (e.g. RE didnt match)
 		tweet.text = tweet.text.encode('utf-8', 'ignore')
-		tweet.simpletext = phraseify(tweet.text, tweet.search_string)
-		return tweet
+		match = me.re.search(tweet.text)
+		if not match:
+			print "PATTERN: " + me.pattern + " NO MATCH"
+			return False
 
-	def test_search(me):
-		results = me.api.GetSearch('"' + me.search_string + '"')
-		for r in results:
+		phrase = match.group()
+		if phrase[-4:] == "http":
+			phrase = phrase[:-4] # remove links
+
+		tweet.phrase = phrase
+		return True
+
+	def search(me):
+		results = me.api.GetSearch(me.quoted_string,
+					since_id=me.max_id)
+		me.max_id = max(r.id for r in results) # i <3 generators
+		goodresults = [r for r in results if me.process_tweet(r)]
+		for r in goodresults:
 			print "~~~~~~~~~~~~~~~~~~~~~~"
-			r.search_string = search_string
-			me.simplify_tweet(r)
-			print r.text
-			print "="
-			print r.simpletext
+			print r.phrase
 
 
 def main():
-	t = TweetDownloader()
 	args = sys.argv
-	print "=========================="
-	print "=========================="
-	print "=========================="
 	if len(args) == 1:
-		t.test_search("why am i")
-		print 
-		print
-		print
+		search_string = ("why am i")
 
-		t.test_search("because you")
 	else:
-		argstr = " ".join(args[1:])
-		t.test_search(argstr)
+		search_string = " ".join(args[1:])
+
+	t = TweetDownloader(search_string)
+	while True:
+		t.search()
+		time.sleep(20)
+
 
 if __name__ == '__main__':
 	main()
