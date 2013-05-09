@@ -35,7 +35,7 @@ def get_exchanges(nPairs=500):
 	print "Time elapsed: ", end-start
 
 def call_and_response():
-	why         = TweetDownloader("why am i", require_match=True)
+	why         = TweetDownloader("why am i"   , require_match=True )
 	because     = TweetDownloader("because you", require_match=False)
 	whylist     = []
 	becauselist = []
