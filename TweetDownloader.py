@@ -1,20 +1,23 @@
 #!/usr/bin/env python
-import twitter, sys, re, datetime, time, dateutil.parser, pytz
+import twitter, re
+import time, datetime, dateutil.parser, pytz
+import argparse
+
 CST = pytz.timezone("US/Central")
 
 class TweetDownloader:
 	"""Downloads Tweets matching a given search string and regular expression pattern.
-	TODO: Implement public interface get_Tweets(freshness) which returns all matching Tweets
-	which are fewer than (freshness) seconds old.
+	TODO: Implement public interface get_Tweets(freshness) which returns all 
+	matching Tweets which are fewer than (freshness) seconds old.
 	Takes a search string and options dictionary with parameters:
-	"REQUIRE_MATCH": True  -> find regex only at start of tweet 	
-					 False -> find regex anywhere in tweet
-	"BLOCK_RETWEETS": True -> Block recent retweets (NOT IMPLEMENTED)
-	"VERBOSE"    :  True -> Print a lot of stuff
-	"TIMER"      :  True -> Print download times
-	"POSTFIX" : a regular expression string to append after the search string
-	"PREFIX"  : a regular expression string to prepend to the search string
-	"CASE_SENSITIVE": True -> Enable case sensitivity"""
+	"REQUIRE_MATCH"  (-r): True  -> find regex only at start of tweet 	
+					 	   False -> find regex anywhere in tweet
+	"BLOCK_RETWEETS" (-b): True -> Block recent retweets (NOT IMPLEMENTED)
+	"VERBOSE"        (-v): True -> Print a lot of stuff
+	"TIMER"          (-t): True -> Print download times
+	"CASE_SENSITIVE" (-c): True -> Enable case sensitivity
+	"PREFIX"             : a regular expression string to prepend to the search string
+	"POSTFIX"            : a regular expression string to append after the search string"""
 
 	def __init__(me, search_string, require_match=False, block_retweets=False, 
 		verbose=False, timer=False, prefix="", postfix=r"[^\.\?!\n:,#]*[\.\?!]*",
@@ -29,7 +32,7 @@ class TweetDownloader:
 		me.quoted_string = "\"" + search_string + "\""
 		me.max_id = None
 		me.pattern = prefix + search_string + postfix
-		flags = None if case_sensitive else re.IGNORECASE
+		flags = 0 if case_sensitive else re.IGNORECASE
 		me.re = re.compile(me.pattern, flags=flags)
 
 	def process_Tweet(me, tweet):
@@ -66,14 +69,16 @@ class TweetDownloader:
 		tweet.time = dateutil.parser.parse(tweet.created_at)
 		return True
 
-	def search(me):
-		"""Private function which searches Twitter for new Tweets with the target phrase, and processes them to see if they 
+	def _search(me):
+		"""Private function which searches Twitter for new 
+		Tweets with the target string, and processes them to see if they 
 		have a phrase matching our regular expression."""
-		if TIMER: search_start = time.time()
+		if me.timer: search_start = time.time()
 		results = me.api.GetSearch(me.quoted_string, since_id=me.max_id)
-		if TIMER: 
+		if me.timer: 
 			download_end = time.time()
-			print "Time to download: ", (download_end - search_start) * 1000, "ms ", "found:", len(results)
+			print "Time to download: ", (download_end - search_start) * 1000, 
+			print "ms ", "found:", len(results)
 
 		if not results:
 			return []
@@ -92,13 +97,13 @@ class TweetDownloader:
 		return goodresults
 
 def call_and_response():
-	why = TweetDownloader("why am i", False)
-	because = TweetDownloader("because you", True)
-	whylist = []
+	why         = TweetDownloader("why am i", False)
+	because     = TweetDownloader("because you", True)
+	whylist     = []
 	becauselist = []
 
 	while True:
-		whylist += why.search()
+		whylist     += why.search()
 		becauselist += because.search()
 		try:
 			for i in xrange(10):
@@ -113,14 +118,14 @@ def call_and_response():
 			time.sleep(5)
 
 def get_exchanges(nPairs=500):
-	why = TweetDownloader("why am i", False)
-	because = TweetDownloader("because you", True)
-	whylist = []
+	why         = TweetDownloader("why am i", False)
+	because     = TweetDownloader("because you", True)
+	whylist     = []
 	becauselist = []
 
 	start = time.time()
-	whylist += why.search()
-	becauselist += because.search()
+	whylist     += why._search()
+	becauselist += because._search()
 	for i in xrange(nPairs):
 		try:
 			if not(whylist and becauselist):
@@ -134,8 +139,8 @@ def get_exchanges(nPairs=500):
 			print b.time.astimezone(CST).strftime("%I:%M:%S%p"),
 			print ": ", b.phrase 
 		except IndexError:
-			whylist += why.search()
-			becauselist += because.search()
+			whylist     += why._search()
+			becauselist += because._search()
 			time.sleep(4)			
 
 	end = time.time()
@@ -144,18 +149,37 @@ def get_exchanges(nPairs=500):
 
 
 def main():
-	args = sys.argv
-	if len(args) == 1:
-		get_exchanges(100)
+	parser = argparse.ArgumentParser("TweetDownloader")
+	parser.add_argument("-r", "--require-match", dest="rm",
+		help="Require regex to match on start of Tweet", action="store_true")
+	parser.add_argument("-b", "--block-retweets", dest="b",
+		help="Block retweets - NOT IMPLEMENTED", action="store_true")
+	parser.add_argument("-v", "--verbose", dest="v",
+		help="Print a lot of info", action="store_true")
+	parser.add_argument("-t", "--timer", dest="t",
+		help="Print download time in miliseconds", action="store_true")
+	parser.add_argument("-c", "--case-sensitive", dest="c",
+		help="make search string case sensitive", action="store_true")
+	parser.add_argument("words", nargs="*", 
+		help="the string to search for", default=["why","am","i"])
 
-	else:
-		search_string = " ".join(args[1:])
-		print search_string
-		t = TweetDownloader(search_string, True)
-		while True:
-			t.search()
-			time.sleep(20)
+	args = parser.parse_args()
 
+
+	search_string = " ".join(args.words)
+	t = TweetDownloader(search_string, require_match=args.rm, block_retweets=args.b, 
+		verbose=args.v, timer=args.t, prefix="", postfix=r"[^\.\?!\n:,#]*[\.\?!]*",
+		case_sensitive=args.c)
+	tweets = t._search()
+	while True:
+		if tweets:
+			for tweet in tweets:
+				print tweet.time.astimezone(CST).strftime("%I:%M:%S%p"),
+				print tweet.phrase
+				time.sleep(1)
+		else:
+			tweets += t._search()
+			time.sleep(3)
 
 if __name__ == '__main__':
 	main()
