@@ -45,6 +45,10 @@ class TweetDownloader:
 	def search(me):
 		results = me.api.GetSearch(me.quoted_string,
 					since_id=me.max_id)
+		
+		if results is []:
+			return []
+
 		min_id = min(r.id for r in results)
 		me.max_id = max(r.id for r in results) # i <3 generators
 
@@ -80,7 +84,34 @@ def call_and_response():
 				time.sleep(2)
 		except:
 			time.sleep(5)
-			
+
+def get_exchanges(nPairs=500):
+	why = TweetDownloader("why am i", False)
+	because = TweetDownloader("because you", True)
+	whylist = []
+	becauselist = []
+
+	start = time.time()
+	whylist += why.search()
+	becauselist += because.search()
+	for i in xrange(nPairs):
+		try:
+			if not(whylist and becauselist):
+				raise IndexError
+				# Pop would fail on empty (false) list
+			w = whylist.pop()
+			b = becauselist.pop()
+			print "~~~~~~~~~~~~~~~~~~~~~~"
+			print w.created_at, ": ", w.phrase 
+			print b.created_at, ": ", b.phrase 
+		except IndexError:
+			whylist += why.search()
+			becauselist += because.search()
+			time.sleep(2)			
+
+	end = time.time()
+
+	print "Time elapsed: ", end-start
 
 
 
@@ -88,7 +119,7 @@ def call_and_response():
 def main():
 	args = sys.argv
 	if len(args) == 1:
-		call_and_response()
+		get_exchanges(500)
 
 	else:
 		search_string = " ".join(args[1:])
