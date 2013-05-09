@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import twitter, sys, re, datetime, time, dateutil.parser, pytz
 CST = pytz.timezone("US/Central")
+TIMER = True
 
 class TweetDownloader:
 	def __init__(me, search_string, search_mode = True, verbose = False):
@@ -45,13 +46,15 @@ class TweetDownloader:
 		return True
 
 	def search(me):
-		results = me.api.GetSearch(me.quoted_string,
-					since_id=me.max_id)
-		
+		if TIMER: search_start = time.time()
+		results = me.api.GetSearch(me.quoted_string, since_id=me.max_id)
+		if TIMER: 
+			download_end = time.time()
+			print "Time to download: ", (download_end - search_start) * 1000, "ms ", "found:", len(results)
+
 		if not results:
 			return []
 
-		min_id = min(r.id for r in results)
 		me.max_id = max(r.id for r in results) # i <3 generators
 
 		goodresults = [r for r in results if me.process_tweet(r)]
@@ -62,8 +65,7 @@ class TweetDownloader:
 				print "~~~~~~~~~~~~~~~~~~~~~~"
 				#print r.text
 				print r.phrase
-				#print r.id, ",", r.id - min_id
-				#print r.created_at
+
 		return goodresults
 
 def call_and_response():
@@ -111,7 +113,7 @@ def get_exchanges(nPairs=500):
 		except IndexError:
 			whylist += why.search()
 			becauselist += because.search()
-			time.sleep(2)			
+			time.sleep(4)			
 
 	end = time.time()
 
