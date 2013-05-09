@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-import twitter, sys, re, time
+import twitter, sys, re, datetime, time, dateutil.parser, pytz
+CST = pytz.timezone("US/Central")
 
 class TweetDownloader:
 	def __init__(me, search_string, search_mode = True, verbose = False):
@@ -40,13 +41,14 @@ class TweetDownloader:
 			phrase = phrase[:-4] # remove links
 
 		tweet.phrase = phrase
+		tweet.time = dateutil.parser.parse(tweet.created_at)
 		return True
 
 	def search(me):
 		results = me.api.GetSearch(me.quoted_string,
 					since_id=me.max_id)
 		
-		if results is []:
+		if not results:
 			return []
 
 		min_id = min(r.id for r in results)
@@ -101,9 +103,11 @@ def get_exchanges(nPairs=500):
 				# Pop would fail on empty (false) list
 			w = whylist.pop()
 			b = becauselist.pop()
-			print "~~~~~~~~~~~~~~~~~~~~~~"
-			print w.created_at, ": ", w.phrase 
-			print b.created_at, ": ", b.phrase 
+			print #"~~~~~~~~~~~~~~~~~~~~~~"
+			print w.time.astimezone(CST).strftime("%I:%M:%S%p"),
+			print ": ", w.phrase 
+			print b.time.astimezone(CST).strftime("%I:%M:%S%p"),
+			print ": ", b.phrase 
 		except IndexError:
 			whylist += why.search()
 			becauselist += because.search()
@@ -114,16 +118,14 @@ def get_exchanges(nPairs=500):
 	print "Time elapsed: ", end-start
 
 
-
-
 def main():
 	args = sys.argv
 	if len(args) == 1:
-		get_exchanges(500)
+		get_exchanges(100)
 
 	else:
 		search_string = " ".join(args[1:])
-
+		print search_string
 		t = TweetDownloader(search_string, True)
 		while True:
 			t.search()
