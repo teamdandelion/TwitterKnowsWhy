@@ -35,7 +35,7 @@ class TweetDownloader:
 		flags = 0 if case_sensitive else re.IGNORECASE
 		me.re = re.compile(me.pattern, flags=flags)
 
-	def process_Tweet(me, tweet):
+	def _process_Tweet(me, tweet):
 		"""Uses regular expressions to simplify the tweet to contain
 		 a sentance or phrase starting with the search expression
 		 eg: "Argh Dan, why are you so awesome?!" with search 
@@ -85,67 +85,17 @@ class TweetDownloader:
 
 		me.max_id = max(r.id for r in results) # i <3 generators
 
-		goodresults = [r for r in results if me.process_Tweet(r)]
+		good_Tweets = [r for r in results if me._process_Tweet(r)]
 		
 		if me.verbose:
 			print "=========================", len(results)
-			for r in goodresults:
+			for r in good_Tweets:
 				print "~~~~~~~~~~~~~~~~~~~~~~"
 				#print r.text
 				print r.phrase
 
-		return goodresults
+		return good_Tweets
 
-def call_and_response():
-	why         = TweetDownloader("why am i", False)
-	because     = TweetDownloader("because you", True)
-	whylist     = []
-	becauselist = []
-
-	while True:
-		whylist     += why.search()
-		becauselist += because.search()
-		try:
-			for i in xrange(10):
-				w = whylist.pop()
-				b = becauselist.pop()
-				print "~~~~~~~~~~~~~~~~~~~~~~"
-				print w.phrase
-				time.sleep(1)
-				print b.phrase
-				time.sleep(2)
-		except:
-			time.sleep(5)
-
-def get_exchanges(nPairs=500):
-	why         = TweetDownloader("why am i", False)
-	because     = TweetDownloader("because you", True)
-	whylist     = []
-	becauselist = []
-
-	start = time.time()
-	whylist     += why._search()
-	becauselist += because._search()
-	for i in xrange(nPairs):
-		try:
-			if not(whylist and becauselist):
-				raise IndexError
-				# Pop would fail on empty (false) list
-			w = whylist.pop()
-			b = becauselist.pop()
-			print #"~~~~~~~~~~~~~~~~~~~~~~"
-			print w.time.astimezone(CST).strftime("%I:%M:%S%p"),
-			print ": ", w.phrase 
-			print b.time.astimezone(CST).strftime("%I:%M:%S%p"),
-			print ": ", b.phrase 
-		except IndexError:
-			whylist     += why._search()
-			becauselist += because._search()
-			time.sleep(4)			
-
-	end = time.time()
-
-	print "Time elapsed: ", end-start
 
 
 def main():
@@ -170,7 +120,7 @@ def main():
 	t = TweetDownloader(search_string, require_match=args.rm, block_retweets=args.b, 
 		verbose=args.v, timer=args.t, prefix="", postfix=r"[^\.\?!\n:,#]*[\.\?!]*",
 		case_sensitive=args.c)
-	tweets = t._search()
+	tweets = t._search()[::-1]
 	while True:
 		if tweets:
 			for tweet in tweets:
@@ -178,7 +128,7 @@ def main():
 				print tweet.phrase
 				time.sleep(1)
 		else:
-			tweets += t._search()
+			tweets += t._search()[::-1]
 			time.sleep(3)
 
 if __name__ == '__main__':
