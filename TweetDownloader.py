@@ -2,13 +2,17 @@
 import twitter, sys, re, time
 
 class TweetDownloader:
-	def __init__(me, search_string):
+	def __init__(me, search_string, search_mode = True, verbose = False):
+		# SearchMode: True -> Search (phrase can be anywhere in 
+		# text) False -> Match (phrase must be at start of text)
 		me.api = twitter.Api()
 		me.search_string = search_string
 		me.quoted_string = "\"" + search_string + "\""
 		me.max_id = None
 		me.pattern = search_string + r"[^\.\?!\n:,#]*[\.\?!]*"
 		me.re = re.compile(me.pattern, flags=re.IGNORECASE)
+		me.search_mode = search_mode
+		me.verbose = verbose
 
 	def process_tweet(me, tweet):
 		# Uses regular expressions to simplify the tweet to contain
@@ -21,9 +25,14 @@ class TweetDownloader:
 		# Returns True if processing is successful
 		# Returns False if unable to process (e.g. RE didnt match)
 		tweet.text = tweet.text.encode('utf-8', 'ignore')
-		match = me.re.search(tweet.text)
+		if me.search_mode: 
+			match = me.re.search(tweet.text)
+		else:
+			match = me.re.match(tweet.text)
 		if not match:
-			print "PATTERN: " + me.pattern + " NO MATCH"
+			if me.verbose:
+				print "TWEET: ", tweet.text
+				print "PATTERN: " + me.pattern + " NO MATCH"
 			return False
 
 		phrase = match.group()
@@ -36,25 +45,58 @@ class TweetDownloader:
 	def search(me):
 		results = me.api.GetSearch(me.quoted_string,
 					since_id=me.max_id)
+		min_id = min(r.id for r in results)
 		me.max_id = max(r.id for r in results) # i <3 generators
+
 		goodresults = [r for r in results if me.process_tweet(r)]
-		for r in goodresults:
-			print "~~~~~~~~~~~~~~~~~~~~~~"
-			print r.phrase
+		
+		if me.verbose:
+			print "=========================", len(results)
+			for r in goodresults:
+				print "~~~~~~~~~~~~~~~~~~~~~~"
+				#print r.text
+				print r.phrase
+				#print r.id, ",", r.id - min_id
+				#print r.created_at
+		return goodresults
+
+def call_and_response():
+	why = TweetDownloader("why am i", False)
+	because = TweetDownloader("because you", True)
+	whylist = []
+	becauselist = []
+
+	while True:
+		whylist += why.search()
+		becauselist += because.search()
+		try:
+			for i in xrange(10):
+				w = whylist.pop()
+				b = becauselist.pop()
+				print "~~~~~~~~~~~~~~~~~~~~~~"
+				print w.phrase
+				time.sleep(1)
+				print b.phrase
+				time.sleep(2)
+		except:
+			time.sleep(5)
+			
+
+
 
 
 def main():
 	args = sys.argv
 	if len(args) == 1:
-		search_string = ("why am i")
+		call_and_response()
 
 	else:
 		search_string = " ".join(args[1:])
 
-	t = TweetDownloader(search_string)
-	while True:
-		t.search()
-		time.sleep(20)
+		t = TweetDownloader(search_string, True)
+		while True:
+			t.search()
+			time.sleep(20)
 
 
 if __name__ == '__main__':
