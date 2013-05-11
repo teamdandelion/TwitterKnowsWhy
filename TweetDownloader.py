@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-import twitter, re
+import dan_twitter as twitter
+import re
 import time, datetime, dateutil.parser, pytz
 import argparse
 
@@ -7,9 +8,14 @@ CST = pytz.timezone("US/Central")
 
 class TweetDownloader:
 	"""Downloads Tweets matching a given search string and regular expression pattern.
-	TODO: Implement public interface get_Tweets(freshness) which returns all 
-	matching Tweets which are fewer than (freshness) seconds old.
-	Takes a search string and options dictionary with parameters:
+	Implements 1 public method, get_Tweets, which will return a list of all recent Tweets
+	which match the search pattern. Returns older Tweets first. Can return the same Tweets
+	multiple times if called in quick succession, i.e. does not clear buffer after returning
+
+	Takes a search string and the following options:
+	"freshness" (int f)  : Guarantees that get_Tweets method will return Tweets at most 
+						  	f seconds old
+	"query_rate" (int q) : The maximum rate at which the Downloader will query Twitter
 	"REQUIRE_MATCH"  (-r): True  -> find regex only at start of tweet 	
 					 	   False -> find regex anywhere in tweet
 	"BLOCK_RETWEETS" (-b): True -> Block recent retweets (NOT IMPLEMENTED)
@@ -19,28 +25,28 @@ class TweetDownloader:
 	"PREFIX"             : a regular expression string to prepend to the search string
 	"POSTFIX"            : a regular expression string to append after the search string"""
 
-	def __init__(me, search_string, require_match=False, block_retweets=False, 
-		verbose=False, timer=False, prefix="", postfix=r"[^\.\?!\n:,#]*[\.\?!]*",
-		case_sensitive=False):
+	def __init__(me, search_string, freshness=10, query_rate=3, require_match=False, 
+		block_retweets=False, verbose=False, timer=False, prefix="", 
+		postfix=r"[^\.\?!\n:,#]*[\.\?!]*", case_sensitive=False):
+		me.search_string  = search_string
+		me.quoted_string  = "\"" + search_string + "\""
+		me.freshness      = freshness
+		me.query_rate     = query_rate
 		me.require_match  = require_match
 		me.block_retweets = block_retweets #Not implemented
 		me.verbose        = verbose
 		me.timer          = timer
-		
-		me.api = twitter.Api()
-		me.search_string = search_string
-		me.quoted_string = "\"" + search_string + "\""
-		me.max_id = None
-		me.pattern = prefix + search_string + postfix
-		flags = 0 if case_sensitive else re.IGNORECASE
-		me.re = re.compile(me.pattern, flags=flags)
+		me.api            = twitter.Api()
+		me.max_id         = None
+		me.pattern        = prefix + search_string + postfix
+		flags 			  = 0 if case_sensitive else re.IGNORECASE
+		me.re 			  = re.compile(me.pattern, flags=flags)
 
 	def _process_Tweet(me, tweet):
 		"""Uses regular expressions to simplify the tweet to contain
 		 a sentance or phrase starting with the search expression
 		 eg: "Argh Dan, why are you so awesome?!" with search 
-		 string "why are you" goes to 
-		 "why are you so awesome?!"
+		 string "why are you" goes to "why are you so awesome?!"
 		 Depends on tweet having a .text and .search_string attribute
 		 creates a .simpletext attribute
 		 Returns True if processing is successful
@@ -91,7 +97,7 @@ class TweetDownloader:
 			print "=========================", len(results)
 			for r in good_Tweets:
 				print "~~~~~~~~~~~~~~~~~~~~~~"
-				#print r.text
+				print r.text
 				print r.phrase
 
 		return good_Tweets
