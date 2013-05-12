@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-import dan_twitter as twitter
+import twitter
+import patch_twitter
 import re
 import time, datetime, dateutil.parser, pytz
 import argparse
