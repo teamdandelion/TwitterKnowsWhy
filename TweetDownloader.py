@@ -2,13 +2,19 @@
 import twitter
 import patch_twitter
 import re
-import time, datetime, dateutil.parser, pytz
+import time, datetime, dateutil.tz
 import argparse
 
-CST = pytz.timezone("US/Central")
+local_tz = dateutil.tz.tzlocal()
+def prettyDTime(time):
+	return time.strftime("%I:%M:%S:%p")
+
+def prettyITime(time):
+	dtime = datetime.datetime.fromtimestamp(time, local_tz)
+	return prettyDTime(dtime)
 
 class TweetDownloader:
-	"""Downloads Tweets matching a given search string and regular expression pattern.
+	"""Downloads Tweets matc=hing a given search string and regular expression pattern.
 	Implements 1 public method, get_Tweets, which will return a list of all recent Tweets
 	which match the search pattern. Returns older Tweets first. Can return the same Tweets
 	multiple times if called in quick succession, i.e. does not clear buffer after returning
@@ -106,8 +112,7 @@ class TweetDownloader:
 
 	def GetTweets(me):
 		start_time = int(time.time())
-		start_dtime = datetime.datetime.fromtimestamp(start_time)
-		
+		print prettyITime(start_time), "called get tweets"		
 		if start_time > me.last_search_time + me.query_rate:
 			print "Launching search"
 			newitems = me._search()
@@ -116,14 +121,15 @@ class TweetDownloader:
 			print "got", len(me.cache), "in cache"
 			me.last_search_time = start_time
 		cutoff = start_time - me.freshness
+		print "Cutoff: ", prettyITime(cutoff)
 		print "got", len(me.cache), "before filtering"
 		newcache = []
+
 		for t in me.cache:
 			if t.created_at_in_seconds > cutoff:
 				newcache.append(t)
 			else:
 				print "removed: ", t
-				print "cutoff: ", cutoff, "created: ", t.created_at_in_seconds
 		# me.cache = [c for c in me.cache if c.created_at_in_seconds > cutoff]
 		me.cache = newcache
 		print "got", len(me.cache), "after filtering"
