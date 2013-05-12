@@ -112,27 +112,28 @@ class TweetDownloader:
 
 	def GetTweets(me):
 		start_time = int(time.time())
-		print prettyITime(start_time), "called get tweets"		
+		if me.verbose: print prettyITime(start_time), "called get tweets"		
 		if start_time > me.last_search_time + me.query_rate:
 			print "Launching search"
 			newitems = me._search()
-			print "got", len(newitems), "new items"
+			if me.verbose: print "got", len(newitems), "new items"
 			me.cache += newitems
-			print "got", len(me.cache), "in cache"
+			if me.verbose: print "got", len(me.cache), "in cache"
 			me.last_search_time = start_time
 		cutoff = start_time - me.freshness
-		print "Cutoff: ", prettyITime(cutoff)
-		print "got", len(me.cache), "before filtering"
+		if me.verbose:
+			print "Cutoff: ", prettyITime(cutoff)
+			print "got", len(me.cache), "before filtering"
 		newcache = []
 
 		for t in me.cache:
 			if t.created_at_in_seconds > cutoff:
 				newcache.append(t)
-			else:
+			elif me.verbose:
 				print "removed: ", t
 		# me.cache = [c for c in me.cache if c.created_at_in_seconds > cutoff]
 		me.cache = newcache
-		print "got", len(me.cache), "after filtering"
+		if me.verbose: print "got", len(me.cache), "after filtering"
 		return me.cache
 
 
@@ -162,7 +163,7 @@ def main():
 		verbose=args.v, timer=args.t, prefix="", postfix=r"[^\.\?!\n:,#]*[\.\?!]*",
 		case_sensitive=args.c)
 	while True:
-		print "~~~~~~~~", time.time()
+		print "~~~~~~~~", prettyITime(time.time())
 		tweets = td.GetTweets()
 		for t in tweets:
 			print t
