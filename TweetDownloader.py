@@ -26,7 +26,7 @@ class TweetDownloader:
 	"PREFIX"             : a regular expression string to prepend to the search string
 	"POSTFIX"            : a regular expression string to append after the search string"""
 
-	def __init__(me, search_string, freshness=10, query_rate=3, require_match=False, 
+	def __init__(me, search_string, freshness=20, query_rate=3, require_match=False, 
 		block_retweets=False, verbose=False, timer=False, prefix="", 
 		postfix=r"[^\.\?!\n:,#]*[\.\?!]*", case_sensitive=False):
 		me.search_string  = search_string
@@ -42,6 +42,8 @@ class TweetDownloader:
 		me.pattern        = prefix + search_string + postfix
 		flags 			  = 0 if case_sensitive else re.IGNORECASE
 		me.re 			  = re.compile(me.pattern, flags=flags)
+		me.cache = []
+		me.last_search_time = 0
 
 	def _process_Tweet(me, tweet):
 		"""Uses regular expressions to simplify the tweet to contain
@@ -73,7 +75,6 @@ class TweetDownloader:
 			phrase = phrase[:-4] # remove links
 
 		tweet.phrase = phrase
-		tweet.time = dateutil.parser.parse(tweet.created_at)
 		return True
 
 	def _search(me):
@@ -98,10 +99,35 @@ class TweetDownloader:
 			print "=========================", len(results)
 			for r in good_Tweets:
 				print "~~~~~~~~~~~~~~~~~~~~~~"
+				print r
 				print r.text
-				print r.phrase
 
 		return good_Tweets
+
+	def GetTweets(me):
+		start_time = int(time.time())
+		start_dtime = datetime.datetime.fromtimestamp(start_time)
+		
+		if start_time > me.last_search_time + me.query_rate:
+			print "Launching search"
+			newitems = me._search()
+			print "got", len(newitems), "new items"
+			me.cache += newitems
+			print "got", len(me.cache), "in cache"
+			me.last_search_time = start_time
+		cutoff = start_time - me.freshness
+		print "got", len(me.cache), "before filtering"
+		newcache = []
+		for t in me.cache:
+			if t.created_at_in_seconds > cutoff:
+				newcache.append(t)
+			else:
+				print "removed: ", t
+				print "cutoff: ", cutoff, "created: ", t.created_at_in_seconds
+		# me.cache = [c for c in me.cache if c.created_at_in_seconds > cutoff]
+		me.cache = newcache
+		print "got", len(me.cache), "after filtering"
+		return me.cache
 
 
 
@@ -117,6 +143,8 @@ def main():
 		help="Print download time in miliseconds", action="store_true")
 	parser.add_argument("-c", "--case-sensitive", dest="c",
 		help="make search string case sensitive", action="store_true")
+	# parser.add_argument("-d", "--demo-GetTweets", action="store_true",
+	# 	help="demos the cache ")
 	parser.add_argument("words", nargs="*", 
 		help="the string to search for", default=["why","am","i"])
 
@@ -124,19 +152,16 @@ def main():
 
 
 	search_string = " ".join(args.words)
-	t = TweetDownloader(search_string, require_match=args.rm, block_retweets=args.b, 
+	td = TweetDownloader(search_string, require_match=args.rm, block_retweets=args.b, 
 		verbose=args.v, timer=args.t, prefix="", postfix=r"[^\.\?!\n:,#]*[\.\?!]*",
 		case_sensitive=args.c)
-	tweets = t._search()[::-1]
 	while True:
-		if tweets:
-			for tweet in tweets:
-				print tweet.time.astimezone(CST).strftime("%I:%M:%S%p"),
-				print tweet.phrase
-				time.sleep(1)
-		else:
-			tweets += t._search()[::-1]
-			time.sleep(3)
+		print "~~~~~~~~", time.time()
+		tweets = td.GetTweets()
+		for t in tweets:
+			print t
+		time.sleep(1)
+		
 
 if __name__ == '__main__':
 	main()
