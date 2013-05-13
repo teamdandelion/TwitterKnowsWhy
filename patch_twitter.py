@@ -11,8 +11,8 @@ class Status(TwitterStatus):
 		self.args = args
 		self.time = parseTime(self.created_at)
 		self.pretty_time = prettyITime(self.created_at_in_seconds)
-		self.text = tweet.text.encode('utf-8', 'ignore')
-		self.is_retweet = self.text[0:2] == "RT "
+		self.text = self.text.encode('utf-8', 'ignore')
+		self.is_retweet = self.text[0:3] == "RT "
 		self.phrase = None
 
 	def __str__(self):

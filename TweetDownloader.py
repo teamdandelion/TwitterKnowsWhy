@@ -4,14 +4,7 @@ import patch_twitter
 import re
 import time, datetime, dateutil.tz
 import argparse
-
-local_tz = dateutil.tz.tzlocal()
-def prettyDTime(time):
-	return time.strftime("%I:%M:%S:%p")
-
-def prettyITime(time):
-	dtime = datetime.datetime.fromtimestamp(time, local_tz)
-	return prettyDTime(dtime)
+from pretty_time import prettyITime
 
 class TweetDownloader:
 	"""Downloads Tweets matc=hing a given search string and regular expression pattern.
@@ -32,15 +25,15 @@ class TweetDownloader:
 	"PREFIX"             : a regular expression string to prepend to the search string
 	"POSTFIX"            : a regular expression string to append after the search string"""
 
-	def __init__(me, search_string, freshness=20, query_rate=3, require_match=False, 
-		block_retweets=False, verbose=False, timer=False, prefix="", 
+	def __init__(me, search_string, freshness=100000, query_rate=3, require_match=False, 
+		block_retweets=True, verbose=False, timer=False, prefix="", 
 		postfix=r"[^\.\?!\n:,#]*[\.\?!]*", case_sensitive=False):
 		me.search_string  = search_string
 		me.quoted_string  = "\"" + search_string + "\""
 		me.freshness      = freshness
 		me.query_rate     = query_rate
 		me.require_match  = require_match
-		me.block_retweets = block_retweets #Not implemented
+		me.block_retweets = block_retweets
 		me.verbose        = verbose
 		me.timer          = timer
 		me.api            = twitter.Api()
@@ -48,7 +41,7 @@ class TweetDownloader:
 		me.pattern        = prefix + search_string + postfix
 		flags 			  = 0 if case_sensitive else re.IGNORECASE
 		me.re 			  = re.compile(me.pattern, flags=flags)
-		me.cache = []
+		me.cache 		  = []
 		me.last_search_time = 0
 
 	def _process_Tweet(me, tweet):
@@ -63,7 +56,10 @@ class TweetDownloader:
 		 If processing is successful, it adds attributes 
 		 Tweet.phrase (the matching expression) and Tweet.time
 		 (a DateTime object)"""
-		tweet.text = tweet.text.encode('utf-8', 'ignore')
+
+		if me.block_retweets and tweet.is_retweet:
+			return False
+
 		if me.require_match: 
 			match = me.re.match(tweet.text)
 		else:
@@ -114,7 +110,7 @@ class TweetDownloader:
 		start_time = int(time.time())
 		if me.verbose: print prettyITime(start_time), "called get tweets"		
 		if start_time > me.last_search_time + me.query_rate:
-			print "Launching search"
+			if me.verbose: print "Launching search"
 			newitems = me._search()
 			if me.verbose: print "got", len(newitems), "new items"
 			me.cache += newitems
@@ -167,7 +163,8 @@ def main():
 		tweets = td.GetTweets()
 		for t in tweets:
 			print t
-		time.sleep(1)
+			print t.text
+		time.sleep(10)
 		
 
 if __name__ == '__main__':
