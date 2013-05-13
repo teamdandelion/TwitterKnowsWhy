@@ -76,7 +76,7 @@ class TweetDownloader:
 		if phrase[-4:] == "http":
 			phrase = phrase[:-4] # remove links
 
-		tweet.phrase = phrase
+		tweet.phrase = phrase[0].upper() + phrase[1:]
 		return True
 
 	def _search(me):

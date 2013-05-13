@@ -2,7 +2,7 @@
 from TweetDownloader import TweetDownloader
 from TweetPoster import TweetPoster
 import logging
-import time, datetime
+import time, datetime, random
 
 logging.basicConfig(filename='TweetManager.log', level=logging.DEBUG)
 
@@ -65,7 +65,7 @@ class TweetManager(object):
 	def automate(self, period=180):
 		while True:
 			self.getTweets()
-			if self.good_whys and self.good_bcz:
+			if self.good_whys and self.good_bczs:
 				w = random.choice(self.good_whys)
 				b = random.choice(self.good_bczs)
 				self.postTweet(w,b)
@@ -115,7 +115,7 @@ class TweetManager(object):
 
 
 def main():
-	TweetManager().interact()
+	TweetManager().automate()
 
 if __name__ == '__main__':
 	main()
