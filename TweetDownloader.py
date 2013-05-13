@@ -139,7 +139,7 @@ def main():
 	parser.add_argument("-r", "--require-match", dest="rm",
 		help="Require regex to match on start of Tweet", action="store_true")
 	parser.add_argument("-b", "--block-retweets", dest="b",
-		help="Block retweets - NOT IMPLEMENTED", action="store_true")
+		help="Block retweets", action="store_true")
 	parser.add_argument("-v", "--verbose", dest="v",
 		help="Print a lot of info", action="store_true")
 	parser.add_argument("-t", "--timer", dest="t",

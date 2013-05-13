@@ -2,15 +2,13 @@
 from TweetDownloader import TweetDownloader
 from TweetPoster import TweetPoster
 import logging
-import time, datetime, random
+import time, datetime, random, argparse
 
 logging.basicConfig(filename='TweetManager.log', level=logging.DEBUG)
 
 class TweetManager(object):
-	def __init__(self):
+	def __init__(self, why_freshness, because_freshness):
 		logging.info("initiating TweetManager")
-		why_freshness = 60
-		because_freshness = 180
 		query_rate = 5
 		# logging.debug("freshness={}, query_rate={}".format(freshness, query_rate))
 		logging.info("initiating Downloaders")
@@ -118,7 +116,32 @@ class TweetManager(object):
 
 
 def main():
-	TweetManager().automate()
+	parser = argparse.ArgumentParser("Tweet Manager")
+	# parser.add_argument("-i", "--interactive-mode", dest="i", 
+	# 	help="Launch the manager in interactive mode", action="store_true")
+	parser.add_argument("-a", "--automate", dest="a",
+		help="Launch in automated mode, fires once by default",
+		action="store_true")
+	parser.add_argument("-r", "--run-forever", dest="r",
+		help="Launch in automated mode, activating every (r) seconds",
+		action="store", type=int, default=0)
+	parser.add_argument("-wf", "--why-freshness", dest="wf",
+		help="Set the why-freshness to (wf) default 60",
+		type=int, default=60)
+	parser.add_argument("-bf", "--because-freshness", dest="bf",
+		help="Set the because-freshness to (bf) default 180",
+		type=int, default=180)
+	args = parser.parse_args()
+
+	TM = TweetManager(why_freshness = args.wf, because_freshness = args.bf)
+	if args.r > 0:
+		print "Launching automate forever mode with period {}".format(args.r)
+		TM.automateForever(args.r)
+	elif args.a:
+		TM.automate()
+	else:
+		TM.interact()
+	# TweetManager().automate()
 
 if __name__ == '__main__':
 	main()
