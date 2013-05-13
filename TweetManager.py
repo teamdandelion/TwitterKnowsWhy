@@ -29,14 +29,17 @@ class TweetManager(object):
 		self.TweetPoster = TweetPoster()
 
 	def is_good_why(self, t):
-		if not is_good_tweet(t):
+		if not self.is_good_tweet(t):
 			return False
-
-
+		return True
 
 	def is_good_bcz(self, t):
-		if not is_good_tweet(t):
-			return False			
+		if not self.is_good_tweet(t):
+			return False
+		return True
+
+	def is_good_tweet(self, t):
+		return True			
 
 	def print_with_indices(self, li):
 		i = 0
@@ -45,10 +48,10 @@ class TweetManager(object):
 			i += 1
 
 	def getTweets(self):
-			self.whyTweets = self.whyDownloader.GetTweets()
-			self.bczTweets = self.bczDownloader.GetTweets()
-			self.good_whys = [t for t in whyTweets if self.is_good_why(t)]
-			self.good_bczs = [t for t in bczTweets if self.is_good_bcz(t)]
+		self.whyTweets = self.whyDownloader.GetTweets()
+		self.bczTweets = self.bczDownloader.GetTweets()
+		self.good_whys = [t for t in self.whyTweets if self.is_good_why(t)]
+		self.good_bczs = [t for t in self.bczTweets if self.is_good_bcz(t)]
 
 	def postTweet(self, w, b):
 		self.TweetPoster.postTweet(w,b)
@@ -75,11 +78,12 @@ class TweetManager(object):
 		print "choose a pair of indices to post, or q to quit, or c "
 		print "to continue."
 		while True:
-			if good_whys and good_bczs:
+			self.getTweets()
+			if self.good_whys and self.good_bczs:
 				print "======Why Tweets======"
-				self.print_with_indices(good_whys)
+				self.print_with_indices(self.good_whys)
 				print "====Because Tweets===="
-				self.print_with_indices(good_bczs)
+				self.print_with_indices(self.good_bczs)
 				print "======================"
 
 				try: 
@@ -90,14 +94,12 @@ class TweetManager(object):
 					wi, _, bi = ipt.partition(",")
 					wi = int(wi)
 					bi = int(bi)
-					w = good_whys[wi]
-					b = good_bczs[bi]
+					w = self.good_whys[wi]
+					b = self.good_bczs[bi]
 
 					print w
 					print b
 					self.TweetPoster.postTweet(w,b)
-					whyTweets.remove(w) 
-					bczTweets.remove(b)
 					print "==========="
 
 				except ValueError:
