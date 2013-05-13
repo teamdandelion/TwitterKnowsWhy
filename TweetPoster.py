@@ -11,10 +11,10 @@ class TweetPoster(object):
 		consumer_secret = keys[1]
 		access_key      = keys[2]
 		access_secret   = keys[3]
-		self.api = twitter.Api(consumer_key = consumer_key, 
-			consumer_secret = consumer_secret, 
-			access_token_key = access_key, 
-			access_token_secret = access_secret)
+		self.api = twitter.Api(consumer_key        = consumer_key, 
+							   consumer_secret     = consumer_secret, 
+							   access_token_key    = access_key, 
+							   access_token_secret = access_secret)
 
 	def postTweet(self, whyTweet, bczTweet):
 		whyPhrase = whyTweet.phrase

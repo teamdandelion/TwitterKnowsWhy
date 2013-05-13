@@ -29,10 +29,14 @@ class TweetManager(object):
 		self.TweetPoster = TweetPoster()
 
 	def is_good_why(self, t):
-		return True
+		if not is_good_tweet(t):
+			return False
+
+
 
 	def is_good_bcz(self, t):
-		return True
+		if not is_good_tweet(t):
+			return False			
 
 	def print_with_indices(self, li):
 		i = 0
@@ -40,8 +44,30 @@ class TweetManager(object):
 			print "{} {}".format(i, l)
 			i += 1
 
-	def automate(self):
-		pass
+	def getTweets(self):
+			self.whyTweets = self.whyDownloader.GetTweets()
+			self.bczTweets = self.bczDownloader.GetTweets()
+			self.good_whys = [t for t in whyTweets if self.is_good_why(t)]
+			self.good_bczs = [t for t in bczTweets if self.is_good_bcz(t)]
+
+	def postTweet(self, w, b):
+		self.TweetPoster.postTweet(w,b)
+		self.whyTweets.remove(w)
+		self.bczTweets.remove(b)
+		# This removes it from the cache,
+		# ensuring that we won't get the same tweet again
+		# can throw IOError if combined tweet is too long
+
+
+	def automate(self, period=180):
+		while True:
+			self.getTweets()
+			if self.good_whys and self.good_bcz:
+				w = random.choice(self.good_whys)
+				b = random.choice(self.good_bczs)
+				self.postTweet(w,b)
+
+				time.sleep(period)
 
 
 	def interact(self):
@@ -49,10 +75,6 @@ class TweetManager(object):
 		print "choose a pair of indices to post, or q to quit, or c "
 		print "to continue."
 		while True:
-			whyTweets = self.whyDownloader.GetTweets()
-			bczTweets = self.bczDownloader.GetTweets()
-			good_whys = [t for t in whyTweets if self.is_good_why(t)]
-			good_bczs = [t for t in bczTweets if self.is_good_bcz(t)]
 			if good_whys and good_bczs:
 				print "======Why Tweets======"
 				self.print_with_indices(good_whys)
@@ -74,8 +96,7 @@ class TweetManager(object):
 					print w
 					print b
 					self.TweetPoster.postTweet(w,b)
-					whyTweets.remove(w) # This removes it from the cache,
-					# ensuring that we won't get the same tweet again
+					whyTweets.remove(w) 
 					bczTweets.remove(b)
 					print "==========="
 
@@ -90,7 +111,6 @@ class TweetManager(object):
 					continue
 
 
-			# time.sleep(5)
 
 def main():
 	TweetManager().interact()
