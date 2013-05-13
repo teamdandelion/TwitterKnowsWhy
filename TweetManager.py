@@ -62,15 +62,18 @@ class TweetManager(object):
 		# can throw IOError if combined tweet is too long
 
 
-	def automate(self, period=180):
-		while True:
-			self.getTweets()
-			if self.good_whys and self.good_bczs:
-				w = random.choice(self.good_whys)
-				b = random.choice(self.good_bczs)
-				self.postTweet(w,b)
+	def automate(self):
+		self.getTweets()
+		if self.good_whys and self.good_bczs:
+			w = random.choice(self.good_whys)
+			b = random.choice(self.good_bczs)
+			self.postTweet(w,b)
 
-				time.sleep(period)
+
+	def automateForever(self, period=180):
+		while True:
+			self.automate()
+			time.sleep(period)
 
 
 	def interact(self):
