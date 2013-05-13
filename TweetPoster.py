@@ -21,14 +21,14 @@ class TweetPoster(object):
 		bczPhrase = bczTweet.phrase
 		whyName = whyTweet.GetUser().GetScreenName()
 		bczName = bczTweet.GetUser().GetScreenName()
-		text = "@%s: %s -%s" % (whyName, bczPhrase, bczName) 
+		text = "@%s: %s" % (whyName, bczPhrase) 
 		print text
 		if len(text) > 140:
 			raise IOError
 		self.postRetweet(whyTweet)
 		self.api.PostUpdate(text)
 
-	def postRetweet(tweet):
+	def postRetweet(self, tweet):
 		self.api.PostRetweet(tweet.id)
 
 

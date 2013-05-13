@@ -3,6 +3,7 @@ from TweetDownloader import TweetDownloader
 from TweetPoster import TweetPoster
 import logging
 import time, datetime, random, argparse
+from operator import attrgetter
 import misc
 
 logging.basicConfig(filename='TweetManager.log', level=logging.DEBUG)
@@ -10,47 +11,48 @@ logging.basicConfig(filename='TweetManager.log', level=logging.DEBUG)
 class TweetManager(object):
 	def __init__(self, why_freshness, because_freshness):
 		logging.info("initiating TweetManager")
-		query_rate = 5
+		self.query_rate = 5
 		# logging.debug("freshness={}, query_rate={}".format(freshness, query_rate))
 		logging.info("initiating Downloaders")
 		self.whyDownloader = TweetDownloader("why am i",
 			freshness      = why_freshness,
-			query_rate     = query_rate,
+			query_rate     = self.query_rate,
 			require_match  = True,
 			block_retweets = True)
 
 		self.bczDownloader = TweetDownloader("because you",
 			freshness      = because_freshness,
-			query_rate     = query_rate,
+			query_rate     = self.query_rate,
 			require_match  = False,
 			block_retweets = True)
 
 		self.TweetPoster = TweetPoster()
 
 		self.bad_words    = misc.load_word_set("bad_words.txt")
+		self.happy_words  = misc.load_word_set("happy_words.txt")
 		# self.bad_whys     = misc.load_word_set("badwhys.txt")
 		# self.bad_because  = misc.load_word_set("bads.txt")
 
 	def is_good_tweet(self, t):
-		if self.has_bad_words(t, self.bad_words):
+		if self.has_subword(t, self.bad_words):
 			return False
 		return True
 
 	def is_good_why(self, t):
 		if not self.is_good_tweet(t):
 			return False
-		# if self.has_bad_words(t, self.bad_whys):
+		# if self.has_subword(t, self.bad_whys):
 		# 	return False
 		return True
 
 	def is_good_bcz(self, t):
 		if not self.is_good_tweet(t):
 			return False
-		# if self.has_bad_words(t, self.bad_bczs):
-		# 	return False
+		if not self.has_subword(t, self.happy_words):
+			return False
 		return True
 
-	def has_bad_words(self, t, badset):
+	def has_subword(self, t, badset):
 		for word in t.phrase.split():
 			for substring in misc.get_substrings(word.lower()):
 				if substring in badset:
@@ -75,8 +77,8 @@ class TweetManager(object):
 		self.getTweets()
 		if self.good_whys and self.good_bczs:
 			try:
-				w = random.choice(self.good_whys)
-				b = random.choice(self.good_bczs)
+				w = max(self.good_whys, key=attrgetter('created_at_in_seconds'))
+				b = max(self.good_bczs, key=attrgetter('created_at_in_seconds'))
 				print w
 				print "(%s)" % w.text
 				print "======================"
@@ -84,22 +86,28 @@ class TweetManager(object):
 				print "(%s)" % b.text
 				print "======================"
 				self.postTweet(w,b)
-			except IOError: # tweet would have been too long
+				return True
+			except IOError as e: # tweet would have been too long
 				# let's just try again
-				print "Tweet too long! Recovering"
+				print "Tweet too long! Recovering", e
+				self.automate()
+			except UnicodeDecodeError as e:
+				print e, "recovering"
 				self.automate()
 
 
 	def automateForever(self, period=180):
 		while True:
-			self.automate()
-			time.sleep(period)
+			if self.automate():
+				time.sleep(period)
+			else:
+				print "Found nothing. Sleeping to try again"
+				time.sleep(self.query_rate)
 
 
 	def interact(self):
 		print "Operation: You'll be presented with a list of indices."
-		print "choose a pair of indices to post, or q to quit, or c "
-		print "to continue."
+		print "choose a pair of indices to post, or q to quit, or (c)ontinue or (q)uit"
 		while True:
 			self.getTweets()
 			if self.good_whys and self.good_bczs:
@@ -125,14 +133,14 @@ class TweetManager(object):
 					self.TweetPoster.postTweet(w,b)
 					print "==========="
 
-				except ValueError:
-					print "Unable to parse input..."
+				except ValueError as e:
+					print "Unable to parse input...", e
 					continue
-				except IndexError:
-					print "Index out of range."
+				except IndexError as e:
+					print "Index out of range.", e
 					continue
-				except IOError:
-					print "whyTweet would have been too long"
+				except IOError as e:
+					print "whyTweet would have been too long", e
 					continue
 
 
@@ -152,8 +160,8 @@ def main():
 		help="Set the why-freshness to (wf) default 60",
 		type=int, default=60)
 	parser.add_argument("-bf", "--because-freshness", dest="bf",
-		help="Set the because-freshness to (bf) default 180",
-		type=int, default=180)
+		help="Set the because-freshness to (bf) default 1800",
+		type=int, default=1800)
 	args = parser.parse_args()
 
 	TM = TweetManager(why_freshness = args.wf, because_freshness = args.bf)
