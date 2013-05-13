@@ -3,6 +3,7 @@ from TweetDownloader import TweetDownloader
 from TweetPoster import TweetPoster
 import logging
 import time, datetime, random, argparse
+import misc
 
 logging.basicConfig(filename='TweetManager.log', level=logging.DEBUG)
 
@@ -26,24 +27,34 @@ class TweetManager(object):
 
 		self.TweetPoster = TweetPoster()
 
+		self.bad_words    = misc.load_word_set("bad_words.txt")
+		# self.bad_whys     = misc.load_word_set("badwhys.txt")
+		# self.bad_because  = misc.load_word_set("bads.txt")
+
+	def is_good_tweet(self, t):
+		if self.has_bad_words(t, self.bad_words):
+			return False
+		return True
+
 	def is_good_why(self, t):
 		if not self.is_good_tweet(t):
 			return False
+		# if self.has_bad_words(t, self.bad_whys):
+		# 	return False
 		return True
 
 	def is_good_bcz(self, t):
 		if not self.is_good_tweet(t):
 			return False
+		# if self.has_bad_words(t, self.bad_bczs):
+		# 	return False
 		return True
 
-	def is_good_tweet(self, t):
-		return True			
-
-	def print_with_indices(self, li):
-		i = 0
-		for l in li:
-			print "{} {}".format(i, l)
-			i += 1
+	def has_bad_words(self, t, badset):
+		for word in t.phrase.split():
+			for substring in misc.get_substrings(word.lower()):
+				if substring in badset:
+					return True
 
 	def getTweets(self):
 		self.whyTweets = self.whyDownloader.GetTweets()
@@ -63,9 +74,20 @@ class TweetManager(object):
 	def automate(self):
 		self.getTweets()
 		if self.good_whys and self.good_bczs:
-			w = random.choice(self.good_whys)
-			b = random.choice(self.good_bczs)
-			self.postTweet(w,b)
+			try:
+				w = random.choice(self.good_whys)
+				b = random.choice(self.good_bczs)
+				print w
+				print "(%s)" % w.text
+				print "======================"
+				print b
+				print "(%s)" % b.text
+				print "======================"
+				self.postTweet(w,b)
+			except IOError: # tweet would have been too long
+				# let's just try again
+				print "Tweet too long! Recovering"
+				self.automate()
 
 
 	def automateForever(self, period=180):
@@ -82,9 +104,9 @@ class TweetManager(object):
 			self.getTweets()
 			if self.good_whys and self.good_bczs:
 				print "======Why Tweets======"
-				self.print_with_indices(self.good_whys)
+				misc.print_with_indices(self.good_whys)
 				print "====Because Tweets===="
-				self.print_with_indices(self.good_bczs)
+				misc.print_with_indices(self.good_bczs)
 				print "======================"
 
 				try: 
@@ -115,6 +137,7 @@ class TweetManager(object):
 
 
 
+
 def main():
 	parser = argparse.ArgumentParser("Tweet Manager")
 	# parser.add_argument("-i", "--interactive-mode", dest="i", 
@@ -141,7 +164,6 @@ def main():
 		TM.automate()
 	else:
 		TM.interact()
-	# TweetManager().automate()
 
 if __name__ == '__main__':
 	main()
