@@ -1,6 +1,7 @@
 import twitter
 from dateutil.parser import parse as parseTime
 from dateutil.tz import tzlocal as localTz
+from pretty_time import prettyITime
 
 TwitterStatus = twitter.Status
 
@@ -9,7 +10,9 @@ class Status(TwitterStatus):
 		TwitterStatus.__init__(self, *args, **kwargs)
 		self.args = args
 		self.time = parseTime(self.created_at)
-		self.pretty_time = self.time.astimezone(localTz()).strftime("%I:%M:%S:%p")
+		self.pretty_time = prettyITime(self.created_at_in_seconds)
+		self.text = tweet.text.encode('utf-8', 'ignore')
+		self.is_retweet = self.text[0:2] == "RT "
 		self.phrase = None
 
 	def __str__(self):
