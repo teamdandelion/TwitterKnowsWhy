@@ -31,7 +31,7 @@ class TweetManager(object):
 		self.bad_words    = misc.load_word_set("bad_words.txt")
 		self.happy_words  = misc.load_word_set("happy_words.txt")
 		# self.bad_whys     = misc.load_word_set("badwhys.txt")
-		# self.bad_because  = misc.load_word_set("bads.txt")
+		self.bad_because  = misc.load_word_set("bad_because.txt")
 
 	def is_good_tweet(self, t):
 		if self.has_subword(t, self.bad_words):
@@ -50,13 +50,23 @@ class TweetManager(object):
 			return False
 		if not self.has_subword(t, self.happy_words):
 			return False
+		if self.has_word(t, self.bad_because):
+			return False
 		return True
 
-	def has_subword(self, t, badset):
+	def has_subword(self, t, wordset):
 		for word in t.phrase.split():
 			for substring in misc.get_substrings(word.lower()):
-				if substring in badset:
+				if substring in wordset:
 					return True
+		return False
+
+
+	def has_word(self, t, wordset):
+		for word in t.phrase.split():
+			if word.lower() in wordset:
+				return True
+		return False
 
 	def getTweets(self):
 		self.whyTweets = self.whyDownloader.GetTweets()
@@ -160,8 +170,8 @@ def main():
 		help="Set the why-freshness to (wf) default 60",
 		type=int, default=60)
 	parser.add_argument("-bf", "--because-freshness", dest="bf",
-		help="Set the because-freshness to (bf) default 1800",
-		type=int, default=1800)
+		help="Set the because-freshness to (bf) default 5000",
+		type=int, default=5000)
 	args = parser.parse_args()
 
 	TM = TweetManager(why_freshness = args.wf, because_freshness = args.bf)

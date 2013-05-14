@@ -11,3 +11,5 @@ bad_words.txt
 .DS_Store
 
 nohup.out
+
+*.key
