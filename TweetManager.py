@@ -75,26 +75,28 @@ class TweetManager(object):
 		self.good_bczs = [t for t in self.bczTweets if self.is_good_bcz(t)]
 
 	def postTweet(self, w, b):
-		self.TweetPoster.postTweet(w,b)
 		self.whyTweets.remove(w)
 		self.bczTweets.remove(b)
+		self.TweetPoster.postTweet(w,b)
 		# This removes it from the cache,
 		# ensuring that we won't get the same tweet again
 		# can throw IOError if combined tweet is too long
+		# It removes tweets before attempting to post. This is a bit hackish
+		# ensures that problematic tweets get thrown out
 
 
 	def automate(self):
 		self.getTweets()
 		if self.good_whys and self.good_bczs:
+			w = max(self.good_whys, key=attrgetter('created_at_in_seconds'))
+			b = max(self.good_bczs, key=attrgetter('created_at_in_seconds'))
+			print w
+			print "(%s)" % w.text
+			print "======================"
+			print b
+			print "(%s)" % b.text
+			print "======================"
 			try:
-				w = max(self.good_whys, key=attrgetter('created_at_in_seconds'))
-				b = max(self.good_bczs, key=attrgetter('created_at_in_seconds'))
-				print w
-				print "(%s)" % w.text
-				print "======================"
-				print b
-				print "(%s)" % b.text
-				print "======================"
 				self.postTweet(w,b)
 				return True
 			except IOError as e: # tweet would have been too long
@@ -102,8 +104,8 @@ class TweetManager(object):
 				print "Tweet too long! Recovering", e
 				self.automate()
 			except UnicodeDecodeError as e:
-				print e, "recovering"
-				self.automate()
+				print e
+				return False
 
 
 	def automateForever(self, period=180):
