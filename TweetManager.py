@@ -9,11 +9,16 @@ import misc
 logging.basicConfig(filename='TweetManager.log', level=logging.DEBUG)
 
 class TweetManager(object):
-	def __init__(self, why_freshness, because_freshness):
+	def __init__(self, why_freshness, because_freshness, rude_mode=False):
 		logging.info("initiating TweetManager")
 		self.query_rate = 5
 		# logging.debug("freshness={}, query_rate={}".format(freshness, query_rate))
 		logging.info("initiating Downloaders")
+		self.rude_mode = rude_mode
+		if rude_mode: 
+			print "Entering rude mode"
+		else:
+			print "in nice mode"
 		self.whyDownloader = TweetDownloader("why am i",
 			freshness      = why_freshness,
 			query_rate     = self.query_rate,
@@ -48,10 +53,11 @@ class TweetManager(object):
 	def is_good_bcz(self, t):
 		if not self.is_good_tweet(t):
 			return False
-		if not self.has_subword(t, self.happy_words):
-			return False
-		if self.has_word(t, self.bad_because):
-			return False
+		if not self.rude_mode:
+			if not self.has_subword(t, self.happy_words):
+				return False
+			if self.has_word(t, self.bad_because):
+				return False
 		return True
 
 	def has_subword(self, t, wordset):
@@ -174,9 +180,11 @@ def main():
 	parser.add_argument("-bf", "--because-freshness", dest="bf",
 		help="Set the because-freshness to (bf) default 5000",
 		type=int, default=5000)
+	parser.add_argument("-n", "--nice-mode", dest="nm",
+		help="Disable heuristics intended to send nice tweets", action="store_false")
 	args = parser.parse_args()
 
-	TM = TweetManager(why_freshness = args.wf, because_freshness = args.bf)
+	TM = TweetManager(why_freshness = args.wf, because_freshness = args.bf, rude_mode = args.nm)
 	if args.r > 0:
 		print "Launching automate forever mode with period {}".format(args.r)
 		TM.automateForever(args.r)
