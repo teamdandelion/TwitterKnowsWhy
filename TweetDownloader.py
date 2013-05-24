@@ -2,7 +2,7 @@
 import twitter
 import patch_twitter
 import re
-import time, datetime, dateutil.tz
+import time
 import argparse
 from pretty_time import prettyITime
 
@@ -54,8 +54,7 @@ class TweetDownloader:
 		 Returns True if processing is successful
 		 Returns False if unable to process (e.g. RE didnt match)
 		 If processing is successful, it adds attributes 
-		 Tweet.phrase (the matching expression) and Tweet.time
-		 (a DateTime object)"""
+		 Tweet.phrase (the matching expression)"""
 
 		if me.block_retweets and tweet.is_retweet:
 			return False
